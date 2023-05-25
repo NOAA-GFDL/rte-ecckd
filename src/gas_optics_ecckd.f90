@@ -382,7 +382,7 @@ function gas_optics_int(this, play, plev, tlay, tsfc, gas_desc, &
                         optical_props, sources, col_dry, tlev) &
   result(error_msg)
 
-  class(ty_gas_optics_ecckd), intent(in) :: this
+  class(ty_gas_optics_ecckd), intent(inout) :: this
   real(kind=wp), dimension(:,:), intent(in) :: play !< Layer pressures [Pa]; (ncol, nlay)
   real(kind=wp), dimension(:,:), intent(in) :: plev !< Level pressures [Pa]; (ncol, nlay+1)
   real(kind=wp), dimension(:,:), intent(in) :: tlay !< Layer temperatures [K]; (ncol, nlay)
@@ -428,10 +428,10 @@ end function gas_optics_int
 
 !> @brief Compute gas optical depth given temperature, pressure, and composition.
 !!        Top-of-atmosphere stellar insolation is also reported.
-function gas_optics_ext(this, play, plev, tlay, gas_desc, optical_props, toa_src, col_dry) &
+function gas_optics_ext(this, play, plev, tlay, gas_desc, optical_props, toa_src, col_dry, cos_zen, tlev) &
   result(error_msg)
 
-  class(ty_gas_optics_ecckd), intent(in) :: this
+  class(ty_gas_optics_ecckd), intent(inout) :: this
   real(kind=wp), dimension(:,:), intent(in) :: play !< Layer pressures [Pa]; (ncol, nlay)
   real(kind=wp), dimension(:,:), intent(in) :: plev !< Level pressures [Pa]; (ncol, nlay+1)
   real(kind=wp), dimension(:,:), intent(in) :: tlay !< Layer temperatures [K]; (ncol, nlay)
@@ -439,6 +439,8 @@ function gas_optics_ext(this, play, plev, tlay, gas_desc, optical_props, toa_src
   class(ty_optical_props_arry), intent(inout) :: optical_props
   real(kind=wp), dimension(:,:), intent(out) :: toa_src !< Incoming solar irradiance (ncol, ngpt)
   real(kind=wp), dimension(:,:), intent(in), target, optional :: col_dry !< Column dry amount [cm-2]; (col, nlay)
+  real(kind=wp), dimension(:), intent(in), optional :: cos_zen !< Not used.
+  real(kind=wp), dimension(:,:), intent(in), optional :: tlev !< Not used.
   character(len=128) :: error_msg !< String error message (empty if successful)
 
   integer :: i
