@@ -231,11 +231,13 @@ subroutine calculate_optical_depth(this, gas, level_pressure, layer_temperature,
       endif
 
       !Remove negative optical depths.
-      do k = 1, size(optical_depth, 3)
-        if (optical_depth(i,j,k) .lt. 0.) then
-          optical_depth(i,j,k) = 0.
-        endif
-      enddo
+      if (this%absorption(gas)%concentration_dependence_code .ne. relative_linear) then
+        do k = 1, size(optical_depth, 3)
+          if (optical_depth(i,j,k) .lt. 0.) then
+            optical_depth(i,j,k) = 0.
+          endif
+        enddo
+      endif
     enddo
   enddo
 end subroutine calculate_optical_depth
@@ -335,6 +337,7 @@ function gas_optical_depth(this, plev, tlay, gas_desc, optical_props) &
   integer :: i, j, n
   character(len=32), dimension(:), allocatable :: names
   real(kind=wp), dimension(:,:,:), allocatable :: optical_depth
+  real(kind=wp), dimension(:,:,:), allocatable :: optical_depth_relative_linear
 
   !Calculate the gas optical depth.
   n = gas_desc%get_num_gases()
@@ -342,7 +345,10 @@ function gas_optical_depth(this, plev, tlay, gas_desc, optical_props) &
   names = gas_desc%get_gas_names()
   allocate(layer_vmr(size(tlay, 1), size(tlay, 2)))
   allocate(optical_depth(size(tlay, 1), size(tlay, 2), size(this%gpoint_fraction, 2)))
+  allocate(optical_depth_relative_linear(size(tlay, 1), size(tlay, 2), &
+                                         size(this%gpoint_fraction, 2)))
   optical_depth(:,:,:) = 0.
+  optical_depth_relative_linear(:,:,:) = 0.
   optical_props%tau(:,:,:) = 0.
   first_calc = .true.
   do j = 1, n
@@ -367,12 +373,24 @@ function gas_optical_depth(this, plev, tlay, gas_desc, optical_props) &
     endif
     call calculate_optical_depth(this, i, plev, tlay, &
                                  layer_vmr, optical_depth, .false.)
-    optical_props%tau(:,:,:) = optical_props%tau(:,:,:) + optical_depth(:,:,:)
+    if ((this%absorption(i)%concentration_dependence_code .eq. relative_linear) .or. &
+        (this%absorption(i)%concentration_dependence_code .eq. none_)) then
+      optical_depth_relative_linear(:,:,:) = optical_depth_relative_linear(:,:,:) + &
+                                             optical_depth(:,:,:)
+    else
+      optical_props%tau(:,:,:) = optical_props%tau(:,:,:) + optical_depth(:,:,:)
+    endif
     if (this%absorption(i)%composite_only) then
       first_calc = .false.
     endif
   enddo
-  deallocate(names, layer_vmr, optical_depth)
+
+  where (optical_depth_relative_linear(:,:,:) .lt. 0.)
+    optical_depth_relative_linear(:,:,:) = 0.
+  endwhere
+  optical_props%tau(:,:,:) = optical_props%tau(:,:,:) + optical_depth_relative_linear(:,:,:)
+
+  deallocate(names, layer_vmr, optical_depth, optical_depth_relative_linear)
 end function gas_optical_depth
 
 
